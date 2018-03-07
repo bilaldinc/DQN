@@ -13,7 +13,11 @@ from keras.layers import Dense, Conv2D, MaxPooling2D, Dropout, Flatten
 
 EPISODES = 5000
 ATARI_SHAPE = (105, 80, 4)
-
+import tensorflow as tf
+config = tf.ConfigProto()
+config.gpu_options.per_process_gpu_memory_fraction = 0.8
+config.gpu_options.allow_growth = False
+session = tf.Session(config=config)
 # TO do list
 
 # add linear epsilon decay OKKKK
@@ -22,9 +26,13 @@ ATARI_SHAPE = (105, 80, 4)
 # check complexity of numpy operations. maybe extending dimension everytime is costly? OKKK (they are not)
 # also random acces queue does not change much OKKK
 
-# get parameters as an arguman
-# get history_size as an arguman
-# get model as an arguman
+# tesorflow gpu nun hepsini kullaniyor mu? okk
+# number of prediction by mask?(en son)
+# look minibatch update okkkk
+
+# get parameters as an argumant
+# get history_size as an argumant
+# get model as an argumant
 
 class DQN:
     def __init__(self,env):
@@ -82,30 +90,40 @@ class DQN:
              # act random
             return random.randrange(self.action_size)
         # Predict the best action values
-        act_values = self.model.predict(np.expand_dims(state, axis=0))
+        act_values = self.model.predict(state)
         # return index of best action
         return np.argmax(act_values[0])
-
 
     def replay(self, batch_size):
         # Sample minibatch from the memory
         minibatch = random.sample(self.memory, batch_size)
 
+        minibatch_targets = np.zeros([1,self.action_size])
+        minibatch_inputs = np.zeros(minibatch[0][0].shape)
         # Extract informations from each sample
         for state, action, reward, next_state, done in minibatch:
 
             # calculate target
             target = reward
             if not done:
-                target = (reward + self.gamma * np.amax(self.target_model.predict(np.expand_dims(next_state, axis=0))[0]))
+                target = (reward + self.gamma * np.amax(self.target_model.predict(next_state)[0]))
 
             # get actions to assemble the actions
-            target_f = self.model.predict(np.expand_dims(state, axis=0))
+            target_f = self.model.predict(state)
             # replace desired action with target action
             target_f[0][action] = target
 
             # train network
-            # self.model.fit(np.expand_dims(state, axis=0), target_f, epochs=1, verbose=0)
+            # self.model.fit(state, target_f, epochs=1, verbose=0)
+
+            # append
+            minibatch_targets = np.append(minibatch_targets,target_f,axis=0)
+            minibatch_inputs = np.append(minibatch_inputs,state,axis=0)
+
+        #print(minibatch_inputs[1:,...])
+        #print(minibatch_inputs[1:,...].shape)
+        self.model.fit(minibatch_inputs[1:,...], minibatch_targets[1:,...], epochs=1, verbose=0)
+
 
         if self.epsilon > self.epsilon_min:
             self.epsilon -= (self.epsilon - self.epsilon_min) / self.final_exploration
@@ -146,7 +164,7 @@ class DQN:
             state = np.stack((temp_list[3],temp_list[2],temp_list[1],temp_list[0]), axis=2)
 
         # dimension adjust
-        # state = np.expand_dims(state, axis=0)
+        state = np.expand_dims(state, axis=0)
 
         return state,reward
 
