@@ -14,10 +14,10 @@ from keras.layers import Dense, Conv2D, MaxPooling2D, Dropout, Flatten
 EPISODES = 5000
 ATARI_SHAPE = (105, 80, 4)
 import tensorflow as tf
-config = tf.ConfigProto()
-config.gpu_options.per_process_gpu_memory_fraction = 0.8
-config.gpu_options.allow_growth = False
-session = tf.Session(config=config)
+#config = tf.ConfigProto()
+#config.gpu_options.per_process_gpu_memory_fraction = 0.8
+#config.gpu_options.allow_growth = False
+#session = tf.Session(config=config)
 # TO do list
 
 # add linear epsilon decay OKKKK
@@ -50,7 +50,8 @@ class DQN:
         self.no_op_max = 6 # maybe 30
         self.batch_size = 32
         self.C_steps = 10000 # target network update frequency
-        self.replay_start_size = 1000 # before learning starts play randomly SHOULD BE 50000
+        self.replay_start_size = 50000 # before learning starts play randomly SHOULD BE 50000
+        self.save_network_frequence = 4000000
         self.model = self.build_model()
         self.target_model = self.build_model()
         self.update_target_model()
@@ -120,8 +121,6 @@ class DQN:
             minibatch_targets = np.append(minibatch_targets,target_f,axis=0)
             minibatch_inputs = np.append(minibatch_inputs,state,axis=0)
 
-        #print(minibatch_inputs[1:,...])
-        #print(minibatch_inputs[1:,...].shape)
         self.model.fit(minibatch_inputs[1:,...], minibatch_targets[1:,...], epochs=1, verbose=0)
 
 
@@ -170,6 +169,7 @@ class DQN:
 
     def learn(self, number_of_episodes):
         total_steps = 0;
+        save_count = 0;
 
         for e in range(number_of_episodes):
             # reset state in the beginning of each game
@@ -213,8 +213,13 @@ class DQN:
                     self.replay(self.batch_size)
 
                 # Update target model
-                if total_steps % self.C_steps == 0:
+                if (total_steps % self.C_steps) == 0:
                     self.update_target_model()
+
+                # save model
+                if (total_steps % self.save_network_frequence) == 0:
+                    save_count += 1
+                    self.save("network_weights_" + str(save_count))
 
                 if done:
                     print("episode: " + str(e) + " step_count:" + str(time) + " total reward:" + str(totalreward))
@@ -223,4 +228,4 @@ class DQN:
 
 env = gym.make('BreakoutDeterministic-v4')
 agent1 = DQN(env)
-agent1.learn(1000000)
+agent1.learn(50000000)
