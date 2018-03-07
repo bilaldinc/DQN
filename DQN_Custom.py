@@ -22,9 +22,9 @@ ATARI_SHAPE = (105, 80, 4)
 # check complexity of numpy operations. maybe extending dimension everytime is costly? OKKK (they are not)
 # also random acces queue does not change much OKKK
 
-# get parameters as arguman
-# get history_size as arguman
-# get model as arguman
+# get parameters as an arguman
+# get history_size as an arguman
+# get model as an arguman
 
 class DQN:
     def __init__(self,env):
@@ -104,7 +104,7 @@ class DQN:
             # replace desired action with target action
             target_f[0][action] = target
 
-            train network
+            # train network
             # self.model.fit(np.expand_dims(state, axis=0), target_f, epochs=1, verbose=0)
 
         if self.epsilon > self.epsilon_min:
@@ -146,7 +146,7 @@ class DQN:
             state = np.stack((temp_list[3],temp_list[2],temp_list[1],temp_list[0]), axis=2)
 
         # dimension adjust
-        state = np.expand_dims(state, axis=0)
+        # state = np.expand_dims(state, axis=0)
 
         return state,reward
 
