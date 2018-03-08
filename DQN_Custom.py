@@ -38,7 +38,7 @@ class DQN:
         self.C_steps = 10000 # target network update frequency
         self.replay_start_size = 50000 # before learning starts play randomly SHOULD BE 50000
         self.save_network_frequence = 300000 # 100,000 ~= 1 hour
-        self.epsilon_decay = (self.epsilon - self.epsilon_min) / (self.final_exploration + self.replay_start_size)
+        self.epsilon_decay = (self.epsilon - self.epsilon_min) / (self.final_exploration - self.replay_start_size)
         self.prediction_model = self.build_model()
         self.target_model = self.build_model()
         self.update_target_model()
