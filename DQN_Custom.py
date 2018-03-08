@@ -14,19 +14,11 @@ from keras.layers import Dense, Conv2D, MaxPooling2D, Dropout, Flatten
 ATARI_SHAPE = (105, 80, 4)
 
 # TO do list
-# add linear epsilon decay DONE!
-# add update frequency parameter (this should speed up 4 times) DONE!
-# add no-op max parameter DONE!
-# also random acces queue does not change much DONE!
 
-# tesorflow gpu nun hepsini kullaniyor mu? DONE!
-# look minibatch update DONE!
 
 # get parameters as an argumant
 # get history_size as an argumant
 # get model as an argumant
-# train based on total step not episode DONE!
-# chekk fit again make predictions at ones maybe it can be speed-up DONE!
 
 class DQN:
     def __init__(self,env):
@@ -108,7 +100,6 @@ class DQN:
 
         #---------------------------------------------------------
         # prepare targets and inputs for trainning
-        minibatch_targets = prediction_model_state_predictions
         minibatch_inputs = np.zeros(minibatch[0][0].shape)
         for index, sample in zip(range(batch_size),minibatch):
             state, action, reward, next_state, done = sample
@@ -125,13 +116,8 @@ class DQN:
             # replace desired action with target action
             prediction_model_state_predictions[index][action] = target
 
-
         # train minibatch
-        self.prediction_model.fit(minibatch_inputs[1:,...], minibatch_targets, epochs=1, verbose=0)
-
-
-        if self.epsilon > self.epsilon_min:
-            self.epsilon -= (self.epsilon - self.epsilon_min) / self.final_exploration
+        self.prediction_model.fit(minibatch_inputs[1:,...], prediction_model_state_predictions, epochs=1, verbose=0)
 
 
     def huber_loss(self, target, prediction):
