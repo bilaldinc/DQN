@@ -45,7 +45,7 @@ class DQN:
         self.batch_size = 32
         self.C_steps = 10000 # target network update frequency
         self.replay_start_size = 50000 # before learning starts play randomly SHOULD BE 50000
-        self.save_network_frequence = 2000000
+        self.save_network_frequence = 2500000
         self.prediction_model = self.build_model()
         self.target_model = self.build_model()
         self.update_target_model()
@@ -220,10 +220,12 @@ class DQN:
                 # Update target model
                 if (total_steps % self.C_steps) == 0:
                     self.update_target_model()
+                    print("target model is updated")
 
                 # save model
                 if (total_steps % self.save_network_frequence) == 0:
                     self.save("network_weights_" + str(total_steps))
+                    print("network is saved to the file network_weights_" + str(total_steps))
 
                 step_in_episode += 1
                 total_steps += 1
