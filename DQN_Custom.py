@@ -13,10 +13,10 @@ from keras.layers import Dense, Conv2D, MaxPooling2D, Dropout, Flatten
 
 EPISODES = 5000
 ATARI_SHAPE = (105, 80, 4)
-import tensorflow as tf
+#import tensorflow as tf
 #config = tf.ConfigProto()
 #config.gpu_options.per_process_gpu_memory_fraction = 0.8
-#config.gpu_options.allow_growth = False
+#config.gpu_options.allow_growth = True
 #session = tf.Session(config=config)
 # TO do list
 
@@ -33,7 +33,9 @@ import tensorflow as tf
 # get parameters as an argumant
 # get history_size as an argumant
 # get model as an argumant
+# train based on total step not episode
 
+# chekk fit again make predictions at ones maybe it can be speed-up
 class DQN:
     def __init__(self,env):
         self.state_size = env.observation_space.shape[0]
@@ -78,7 +80,6 @@ class DQN:
 
     def save_to_experience_pool(self, state, action, reward, next_state, done):
         self.memory.append((state, action, reward, next_state, done))
-        # done indicates whether state is final or not
 
     def load(self, name):
         self.model.load_weights(name)
@@ -101,9 +102,9 @@ class DQN:
 
         minibatch_targets = np.zeros([1,self.action_size])
         minibatch_inputs = np.zeros(minibatch[0][0].shape)
+
         # Extract informations from each sample
         for state, action, reward, next_state, done in minibatch:
-
             # calculate target
             target = reward
             if not done:
@@ -113,9 +114,6 @@ class DQN:
             target_f = self.model.predict(state)
             # replace desired action with target action
             target_f[0][action] = target
-
-            # train network
-            # self.model.fit(state, target_f, epochs=1, verbose=0)
 
             # append
             minibatch_targets = np.append(minibatch_targets,target_f,axis=0)
@@ -145,7 +143,7 @@ class DQN:
         # to grayscale
         state = np.mean(state, axis=2).astype(np.uint8)
         # between [0 1]
-        state = np.divide(state, 255.0)
+        state = np.divide(state, 255.0).astype(np.float16)
         # down sample to 105x80
         state = state[::2, ::2]
 
@@ -167,25 +165,26 @@ class DQN:
 
         return state,reward
 
-    def learn(self, number_of_episodes):
+    def learn(self, max_step):
         total_steps = 0;
+        total_episode = 0;
         save_count = 0;
+        # self.load("network_weights_13")
 
-        for e in range(number_of_episodes):
+        while total_steps < max_step:
             # reset state in the beginning of each game
             state = env.reset()
             self.last_k_history.clear()
             state, reward = self.preprocess(state, 0)
             done = False
             totalreward = 0
+            step_in_episode = 0
 
             # every time step
-            for time in range(500000):
-                total_steps += 1
+            while True:
                 env.render()
-
                 # Decide action
-                if time < self.no_op_max:
+                if step_in_episode < self.no_op_max:
                     # do not move first k move every episode
                     action = 0;
                 else:
@@ -197,7 +196,7 @@ class DQN:
                 # Apply action
                 next_state, reward, done, _ = env.step(action)
                 totalreward += reward
-                print( "episode:" + str(e) + " step:" + str(time) + " reward:" + str(reward))
+                # print( "episode:" + str(e) + " step:" + str(step_in_episode) + " reward:" + str(reward))
 
                 # Preprocess state and reward
                 next_state, reward = self.preprocess(next_state, reward)
@@ -208,7 +207,7 @@ class DQN:
                 # make next_state the new current state for the next frame.
                 state = next_state
 
-                if total_steps >= self.replay_start_size and len(self.memory) > self.batch_size and (total_steps % self.update_frequency == 0) :
+                if (total_steps >= self.replay_start_size) and (len(self.memory) > self.batch_size) and (total_steps % self.update_frequency == 0):
                     # Perform SGD
                     self.replay(self.batch_size)
 
@@ -221,11 +220,15 @@ class DQN:
                     save_count += 1
                     self.save("network_weights_" + str(save_count))
 
+                step_in_episode += 1
+                total_steps += 1
                 if done:
-                    print("episode: " + str(e) + " step_count:" + str(time) + " total reward:" + str(totalreward))
+                    print("episode: " + str(total_episode) + " total_reward:" + str(totalreward) + " total_steps:" + str(total_steps))
                     break
+
+            total_episode += 1
 
 
 env = gym.make('BreakoutDeterministic-v4')
 agent1 = DQN(env)
-agent1.learn(50000000)
+agent1.learn(10000000)
