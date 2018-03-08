@@ -11,32 +11,22 @@ import keras
 from keras.models import Sequential
 from keras.layers import Dense, Conv2D, MaxPooling2D, Dropout, Flatten
 
-EPISODES = 5000
 ATARI_SHAPE = (105, 80, 4)
-#import tensorflow as tf
-#config = tf.ConfigProto()
-#config.gpu_options.per_process_gpu_memory_fraction = 0.8
-#config.gpu_options.allow_growth = True
-#session = tf.Session(config=config)
+
 # TO do list
+# add linear epsilon decay DONE!
+# add update frequency parameter (this should speed up 4 times) DONE!
+# add no-op max parameter DONE!
+# also random acces queue does not change much DONE!
 
-# add linear epsilon decay OKKKK
-# add update frequency parameter (this should speed up 4 times) OKKKK
-# add no-op max parameter OKKK
-# check complexity of numpy operations. maybe extending dimension everytime is costly? OKKK (they are not)
-# also random acces queue does not change much OKKK
-
-# tesorflow gpu nun hepsini kullaniyor mu? okk
-# number of prediction by mask?(en son)
-# look minibatch update okkkk
+# tesorflow gpu nun hepsini kullaniyor mu? DONE!
+# look minibatch update DONE!
 
 # get parameters as an argumant
 # get history_size as an argumant
 # get model as an argumant
-# train based on total step not episode
-
-# chekk fit again make predictions at ones maybe it can be speed-up
-# epsilon_decrease is in wrong place
+# train based on total step not episode DONE!
+# chekk fit again make predictions at ones maybe it can be speed-up DONE!
 
 class DQN:
     def __init__(self,env):
@@ -54,7 +44,7 @@ class DQN:
         self.no_op_max = 6 # maybe 30
         self.batch_size = 32
         self.C_steps = 10000 # target network update frequency
-        self.replay_start_size = 50 # before learning starts play randomly SHOULD BE 50000
+        self.replay_start_size = 50000 # before learning starts play randomly SHOULD BE 50000
         self.save_network_frequence = 2000000
         self.prediction_model = self.build_model()
         self.target_model = self.build_model()
@@ -197,7 +187,7 @@ class DQN:
             step_in_episode = 0
 
             # every time step
-            while True:
+            while not done:
                 env.render()
                 # Decide action
                 if step_in_episode < self.no_op_max:
@@ -237,10 +227,11 @@ class DQN:
 
                 step_in_episode += 1
                 total_steps += 1
-                if done:
-                    print("episode: " + str(total_episode) + " total_reward:" + str(totalreward) + " total_steps:" + str(total_steps))
-                    break
 
+                if (total_steps >= self.replay_start_size) and (self.epsilon > self.epsilon_min):
+                    self.epsilon -= (self.epsilon - self.epsilon_min) / self.final_exploration
+
+            print("episode: " + str(total_episode) + " total_reward:" + str(totalreward) + " total_steps:" + str(total_steps) + " epsilon:" + str(self.epsilon))
             total_episode += 1
 
         # save model
