@@ -173,8 +173,8 @@ class DQN:
         return state,reward
 
     def learn(self, max_step):
-        total_steps = 0;
-        total_episode = 0;
+        total_steps = 1;
+        total_episode = 1;
         # self.load("network_weights_13")
 
         while total_steps < max_step:
@@ -184,11 +184,12 @@ class DQN:
             state, reward = self.preprocess(state, 0)
             done = False
             totalreward = 0
-            step_in_episode = 0
+            step_in_episode = 1
 
             # every time step
             while not done:
                 env.render()
+
                 # Decide action
                 if step_in_episode < self.no_op_max:
                     # do not move first k move every episode
@@ -202,7 +203,6 @@ class DQN:
                 # Apply action
                 next_state, reward, done, _ = env.step(action)
                 totalreward += reward
-                # print( "episode:" + str(e) + " step:" + str(step_in_episode) + " reward:" + str(reward))
 
                 # Preprocess state and reward
                 next_state, reward = self.preprocess(next_state, reward)
@@ -227,11 +227,12 @@ class DQN:
                     self.save("network_weights_" + str(total_steps))
                     print("network is saved to the file network_weights_" + str(total_steps))
 
-                step_in_episode += 1
-                total_steps += 1
-
+                # linear epsilon decay
                 if (total_steps >= self.replay_start_size) and (self.epsilon > self.epsilon_min):
                     self.epsilon -= (self.epsilon - self.epsilon_min) / self.final_exploration
+
+                step_in_episode += 1
+                total_steps += 1
 
             print("episode: " + str(total_episode) + " total_reward:" + str(totalreward) + " total_steps:" + str(total_steps) + " epsilon:" + str(self.epsilon))
             total_episode += 1
@@ -242,4 +243,4 @@ class DQN:
 
 env = gym.make('BreakoutDeterministic-v4')
 agent1 = DQN(env)
-agent1.learn(10000000)
+agent1.learn(50000000)
