@@ -53,7 +53,7 @@ class DQN:
         self.batch_size = 32
         self.C_steps = 10000 # target network update frequency
         self.replay_start_size = 50000 # before learning starts play randomly SHOULD BE 50000
-        self.save_network_frequence = 4000000
+        self.save_network_frequence = 2000000
         self.model = self.build_model()
         self.target_model = self.build_model()
         self.update_target_model()
@@ -168,7 +168,6 @@ class DQN:
     def learn(self, max_step):
         total_steps = 0;
         total_episode = 0;
-        save_count = 0;
         # self.load("network_weights_13")
 
         while total_steps < max_step:
@@ -218,7 +217,7 @@ class DQN:
                 # save model
                 if (total_steps % self.save_network_frequence) == 0:
                     save_count += 1
-                    self.save("network_weights_" + str(save_count))
+                    self.save("network_weights_" + str(total_steps))
 
                 step_in_episode += 1
                 total_steps += 1
@@ -227,6 +226,9 @@ class DQN:
                     break
 
             total_episode += 1
+
+        # save model
+        self.save("network_weights_final" + str(total_steps))
 
 
 env = gym.make('BreakoutDeterministic-v4')
