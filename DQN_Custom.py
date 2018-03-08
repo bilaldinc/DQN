@@ -36,6 +36,8 @@ ATARI_SHAPE = (105, 80, 4)
 # train based on total step not episode
 
 # chekk fit again make predictions at ones maybe it can be speed-up
+# epsilon_decrease is in wrong place
+
 class DQN:
     def __init__(self,env):
         self.state_size = env.observation_space.shape[0]
@@ -52,9 +54,9 @@ class DQN:
         self.no_op_max = 6 # maybe 30
         self.batch_size = 32
         self.C_steps = 10000 # target network update frequency
-        self.replay_start_size = 50000 # before learning starts play randomly SHOULD BE 50000
+        self.replay_start_size = 50 # before learning starts play randomly SHOULD BE 50000
         self.save_network_frequence = 2000000
-        self.model = self.build_model()
+        self.prediction_model = self.build_model()
         self.target_model = self.build_model()
         self.update_target_model()
 
@@ -76,23 +78,24 @@ class DQN:
 
     def update_target_model(self):
         # copy weights from model to target_model
-        self.target_model.set_weights(self.model.get_weights())
+        self.target_model.set_weights(self.prediction_model.get_weights())
 
     def save_to_experience_pool(self, state, action, reward, next_state, done):
         self.memory.append((state, action, reward, next_state, done))
 
     def load(self, name):
-        self.model.load_weights(name)
+        self.prediction_model.load_weights(name)
+        self.target_model.load_weights(name)
 
     def save(self, name):
-        self.model.save_weights(name)
+        self.prediction_model.save_weights(name)
 
     def act(self, state):
         if np.random.rand() <= self.epsilon:
              # act random
             return random.randrange(self.action_size)
         # Predict the best action values
-        act_values = self.model.predict(state)
+        act_values = self.prediction_model.predict(state)
         # return index of best action
         return np.argmax(act_values[0])
 
@@ -100,26 +103,40 @@ class DQN:
         # Sample minibatch from the memory
         minibatch = random.sample(self.memory, batch_size)
 
-        minibatch_targets = np.zeros([1,self.action_size])
-        minibatch_inputs = np.zeros(minibatch[0][0].shape)
-
-        # Extract informations from each sample
+        #---------------------------------------------------------
+        # prepare inputs for prediction
+        state_batch = np.zeros(minibatch[0][0].shape)
+        next_state_batch = np.zeros(minibatch[0][0].shape)
         for state, action, reward, next_state, done in minibatch:
+            state_batch = np.append(state_batch, state,axis=0)
+            next_state_batch = np.append(next_state_batch, state, axis=0)
+
+        # predict necessary informations to produce targets
+        prediction_model_state_predictions = self.prediction_model.predict(state_batch[1:, ...])
+        target_model_next_state_predictions = self.target_model.predict(next_state_batch[1:, ...])
+
+        #---------------------------------------------------------
+        # prepare targets and inputs for trainning
+        minibatch_targets = prediction_model_state_predictions
+        minibatch_inputs = np.zeros(minibatch[0][0].shape)
+        for index, sample in zip(range(batch_size),minibatch):
+            state, action, reward, next_state, done = sample
+
+            # append input state
+            minibatch_inputs = np.append(minibatch_inputs,state,axis=0)
+
             # calculate target
             target = reward
             if not done:
-                target = (reward + self.gamma * np.amax(self.target_model.predict(next_state)[0]))
+                # target should produced from target model
+                target = (reward + self.gamma * np.amax(target_model_next_state_predictions[index]))
 
-            # get actions to assemble the actions
-            target_f = self.model.predict(state)
             # replace desired action with target action
-            target_f[0][action] = target
+            prediction_model_state_predictions[index][action] = target
 
-            # append
-            minibatch_targets = np.append(minibatch_targets,target_f,axis=0)
-            minibatch_inputs = np.append(minibatch_inputs,state,axis=0)
 
-        self.model.fit(minibatch_inputs[1:,...], minibatch_targets[1:,...], epochs=1, verbose=0)
+        # train minibatch
+        self.prediction_model.fit(minibatch_inputs[1:,...], minibatch_targets, epochs=1, verbose=0)
 
 
         if self.epsilon > self.epsilon_min:
@@ -216,7 +233,6 @@ class DQN:
 
                 # save model
                 if (total_steps % self.save_network_frequence) == 0:
-                    save_count += 1
                     self.save("network_weights_" + str(total_steps))
 
                 step_in_episode += 1
