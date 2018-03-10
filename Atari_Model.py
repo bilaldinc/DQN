@@ -15,7 +15,6 @@ from keras.layers import Dense, Conv2D, Flatten
 # ANN model and preprocessing described in the  "Human-level control through deep reinforcement learning"
 
 class Atari_Model:
-
     def __init__(self, learning_rate, action_size):
         self.action_size = action_size
         self.learning_rate = learning_rate
@@ -32,10 +31,11 @@ class Atari_Model:
         rmsprop = keras.optimizers.RMSprop(lr=self.learning_rate,rho=0.95, epsilon=0.01)
         model.compile(loss=self.huber_loss, optimizer=rmsprop)
 
+        model.summary()
         return model
 
 
-    def preprocess(self, state, reward, last_k_history):
+    def preprocess(self, state, reward, done, last_k_history):
         # clip rewards -1 to 1
         if reward < 0:
             reward = -1

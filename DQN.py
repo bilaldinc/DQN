@@ -98,15 +98,15 @@ class DQN:
         self.prediction_model.fit(minibatch_inputs[1:,...], prediction_model_state_predictions, epochs=1, verbose=0)
 
     def learn(self, max_step):
-        total_steps = 1;
-        total_episode = 1;
+        total_steps = 1
+        total_episode = 1
 
         while total_steps < max_step:
             # reset state in the beginning of each game
             state = self.environment.reset()
             self.last_k_history.clear()
-            state, reward = self.preprocess(state, 0,self.last_k_history)
             done = False
+            state, reward = self.preprocess(state, 0, done, self.last_k_history)
             totalreward = 0
             step_in_episode = 1
 
@@ -129,7 +129,7 @@ class DQN:
                 totalreward += reward
 
                 # Preprocess state and reward
-                next_state, reward = self.preprocess(next_state, reward,self.last_k_history)
+                next_state, reward = self.preprocess(next_state, done, reward,self.last_k_history)
 
                 # save to the experience pool the previous state, action, reward, and done
                 self.experience_pool.append((state, action, reward, next_state, done))
@@ -158,22 +158,24 @@ class DQN:
                 step_in_episode += 1
                 total_steps += 1
 
-            print("episode: " + str(total_episode) + " total_reward:" + str(totalreward) + " total_steps:" + str(total_steps) + " epsilon:" + str(self.epsilon))
+            print("episode: " + str(total_episode) + " reward:" + str(totalreward) + " step:" + str(step_in_episode) + " total_steps:" + str(total_steps) + " epsilon:" + str(self.epsilon))
             total_episode += 1
 
         # save model
         self.save("network_weights_final" + str(total_steps))
 
     def play(self,max_episode,epsilon,wait):
-        total_episode = 1;
+        total_episode = 1
+        total_steps = 1
 
         while total_episode < max_episode:
             # reset state in the beginning of each game
             state =  self.environment.reset()
             self.last_k_history.clear()
-            state, reward = self.preprocess(state, 0, self.last_k_history)
             done = False
+            state, reward = self.preprocess(state, 0, done, self.last_k_history)
             totalreward = 0
+            step_in_episode = 1
 
             # every time step
             while not done:
@@ -187,14 +189,16 @@ class DQN:
                 totalreward += reward
 
                 # Preprocess state and reward
-                next_state, reward = self.preprocess(next_state, reward, self.last_k_history)
+                next_state, reward = self.preprocess(next_state, reward, done, self.last_k_history)
 
                 # make next_state the new current state for the next frame.
                 state = next_state
 
                 # wait
                 time.sleep(wait)
+                step_in_episode += 1
+                total_steps += 1
 
 
-            print("episode: " + str(total_episode) + " reward:" + str(totalreward))
+            print("episode: " + str(total_episode) + " reward:" + str(totalreward) + " step:" + str(step_in_episode))
             total_episode += 1
