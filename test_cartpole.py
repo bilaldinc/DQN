@@ -24,6 +24,7 @@ last_k_history = 1
 environment = gym.make('CartPole-v1')
 state_size = environment.observation_space.shape[0]
 action_size = environment.action_space.n
+file_name = "cartpole"
 
 
 
@@ -31,7 +32,7 @@ cart_pole_model = Cart_Pole_Model(learning_rate, action_size)
 
 agent = DQN(environment,experience_pool_size, update_frequency, gamma,epsilon_start,
     epsilon_min, final_exploration, batch_size,target_network_update_frequency,
-    replay_start_size, do_nothing_actions,save_network_frequency,last_k_history,cart_pole_model.preprocess, cart_pole_model.build_model(),cart_pole_model.build_model())
+    replay_start_size, do_nothing_actions,save_network_frequency,last_k_history,cart_pole_model.preprocess, cart_pole_model.build_model(),cart_pole_model.build_model(),file_name)
 
 # agent.load("cartpole-ddqn.h5")
 agent.learn(MAX_STEP)

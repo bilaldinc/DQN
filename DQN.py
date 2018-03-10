@@ -19,7 +19,7 @@ ATARI_SHAPE = (105, 80, 4)
 class DQN:
     def __init__(self,environment,experience_pool_size, update_frequency, gamma,epsilon_start,
         epsilon_min, final_exploration, batch_size,target_network_update_frequency,
-        replay_start_size, do_nothing_actions,save_network_frequency,last_k_history,preprocess,prediction_model,target_model):
+        replay_start_size, do_nothing_actions,save_network_frequency,last_k_history,preprocess,prediction_model,target_model,file_name):
 
         self.experience_pool = deque(maxlen=experience_pool_size)
         self.update_frequency = update_frequency
@@ -34,6 +34,7 @@ class DQN:
         self.save_network_frequence = save_network_frequency
         self.last_k_history = deque(maxlen=last_k_history)
         self.preprocess = preprocess
+        self.file_name = file_name
 
         self.environment = environment
         self.state_size = environment.observation_space.shape[0]
@@ -149,7 +150,7 @@ class DQN:
                 # save model
                 if (total_steps % self.save_network_frequence) == 0:
                     self.save("network_weights_" + str(total_steps))
-                    print("network is saved to the file network_weights_" + str(total_steps))
+                    print(self.file_name + "_network is saved to the file network_weights_" + str(total_steps))
 
                 # linear epsilon decay
                 if (total_steps >= self.replay_start_size) and (self.epsilon > self.epsilon_min):
