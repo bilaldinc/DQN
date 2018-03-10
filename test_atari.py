@@ -28,6 +28,47 @@ action_size = environment.action_space.n
 file_name = "atari_full"
 
 
+'''
+MAX_STEP = 50000000
+experience_pool_size = int(1000000 / 4)
+update_frequency = int(4 / 4)
+gamma = 0.99
+epsilon_start = 1.0
+epsilon_min = 0.1
+final_exploration = int(1000000 / 4)
+learning_rate = 0.00025
+batch_size = 32
+target_network_update_frequency = int(10000 / 4)
+replay_start_size = int(50000 / 4)
+do_nothing_actions = int(30 / 4)
+save_network_frequency = 200000 # 100,000 ~= 1 hour
+last_k_history = 4
+environment =  gym.make('BreakoutDeterministic-v4')
+state_size = environment.observation_space.shape[0]
+action_size = environment.action_space.n
+file_name = "atari_quarter_full"
+'''
+'''
+MAX_STEP = 50000000
+experience_pool_size = 1000000
+update_frequency = int(4 / 4)
+gamma = 0.99
+epsilon_start = 1.0
+epsilon_min = 0.1
+final_exploration = int(1000000 / 4)
+learning_rate = 0.00025
+batch_size = 32
+target_network_update_frequency = int(10000 / 4)
+replay_start_size = 50000
+do_nothing_actions = int(30 / 4)
+save_network_frequency = 200000 # 100,000 ~= 1 hour
+last_k_history = 4
+environment =  gym.make('BreakoutDeterministic-v4')
+state_size = environment.observation_space.shape[0]
+action_size = environment.action_space.n
+file_name = "atari_quarter"
+'''
+
 
 atari_model = Atari_Model(learning_rate, action_size)
 
