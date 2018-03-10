@@ -10,7 +10,7 @@ from keras.optimizers import Adam
 from keras import backend as K
 import keras
 from keras.models import Sequential
-from keras.layers import Dense, Conv2D, Flatten
+from keras.layers import Dense, Conv2D, Flatten, Lambda
 import scipy.misc
 
 
@@ -23,7 +23,8 @@ class Atari_Model:
 
     def build_model(self):
         model = Sequential()
-        model.add(Conv2D(32, (8, 8), padding='same', activation='relu', input_shape=(105, 80, 4), strides=(4, 4)))
+        model.add(Lambda(lambda x: x / 255.0, input_shape=(84, 84, 4)))
+        model.add(Conv2D(32, (8, 8), padding='same', activation='relu', strides=(4, 4)))
         model.add(Conv2D(64, (4, 4), padding='same', activation='relu', strides=(2, 2)))
         model.add(Conv2D(64, (3, 3), padding='same', activation='relu', strides=(1, 1)))
         model.add(Flatten()) # converts vectors to one dimension.
@@ -49,9 +50,10 @@ class Atari_Model:
         # to grayscale
         state = np.mean(state, axis=2).astype(np.uint8)
         # between [0 1]
-        state = np.divide(state, 255.0).astype(np.float16)
+        # state = np.divide(state, 255.0).astype(np.float16)
         # down sample to 105x80
-        state = state[::2, ::2]
+        # state = state[::2, ::2]
+        state = scipy.misc.imresize(state, (84,84)).astype(np.uint8)
 
         # concatenate with last 4 history
         last_k_history.append(state)

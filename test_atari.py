@@ -1,6 +1,11 @@
 import gym
 from DQN import DQN
 from Atari_Model import Atari_Model
+import tensorflow as tf
+
+config = tf.ConfigProto()
+config.gpu_options.allow_growth = True
+session = tf.Session(config=config)
 
 
 MAX_STEP = 50000000
@@ -15,7 +20,7 @@ batch_size = 32
 target_network_update_frequency = 10000
 replay_start_size = 50000
 do_nothing_actions = 30
-save_network_frequency = 300000 # 100,000 ~= 1 hour
+save_network_frequency = 200000 # 100,000 ~= 1 hour
 last_k_history = 4
 environment =  gym.make('BreakoutDeterministic-v4')
 state_size = environment.observation_space.shape[0]

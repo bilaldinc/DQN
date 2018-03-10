@@ -1,7 +1,11 @@
 import gym
 from DQN import DQN
 from Cart_Pole_Model import Cart_Pole_Model
+import tensorflow as tf
 
+config = tf.ConfigProto()
+config.gpu_options.allow_growth = True
+session = tf.Session(config=config)
 
 MAX_STEP = 50000000
 experience_pool_size = 2000
@@ -29,7 +33,7 @@ agent = DQN(environment,experience_pool_size, update_frequency, gamma,epsilon_st
     epsilon_min, final_exploration, batch_size,target_network_update_frequency,
     replay_start_size, do_nothing_actions,save_network_frequency,last_k_history,cart_pole_model.preprocess, cart_pole_model.build_model(),cart_pole_model.build_model())
 
-agent.load("cartpole-ddqn.h5")
+# agent.load("cartpole-ddqn.h5")
 agent.learn(MAX_STEP)
 
 # agent.play(100,0,0.02)
