@@ -14,7 +14,7 @@ learning_rate = 0.00025
 batch_size = 32
 target_network_update_frequency = 10000
 replay_start_size = 50000
-do_nothing_actions = 6
+do_nothing_actions = 30
 save_network_frequency = 300000 # 100,000 ~= 1 hour
 last_k_history = 4
 environment =  gym.make('BreakoutDeterministic-v4')

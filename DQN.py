@@ -106,9 +106,9 @@ class DQN:
             state = self.environment.reset()
             self.last_k_history.clear()
             done = False
-            state, reward = self.preprocess(state, 0, done, self.last_k_history)
             totalreward = 0
             step_in_episode = 1
+            state, reward = self.preprocess(state, 0, done, self.last_k_history)
 
             # every time step
             while not done:

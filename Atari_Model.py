@@ -11,6 +11,8 @@ from keras import backend as K
 import keras
 from keras.models import Sequential
 from keras.layers import Dense, Conv2D, Flatten
+import scipy.misc
+
 
 # ANN model and preprocessing described in the  "Human-level control through deep reinforcement learning"
 
@@ -58,11 +60,11 @@ class Atari_Model:
         if len(temp_list) == 1:
             state = np.stack((temp_list[0],temp_list[0],temp_list[0],temp_list[0]), axis=2)
         elif len(temp_list) == 2:
-            state = np.stack((temp_list[1],temp_list[0],temp_list[0],temp_list[0]), axis=2)
+            state = np.stack((temp_list[0],temp_list[0],temp_list[0],temp_list[1]), axis=2)
         elif len(temp_list) == 3:
-            state = np.stack((temp_list[2],temp_list[1],temp_list[0],temp_list[0]), axis=2)
+            state = np.stack((temp_list[0],temp_list[0],temp_list[1],temp_list[2]), axis=2)
         else:
-            state = np.stack((temp_list[3],temp_list[2],temp_list[1],temp_list[0]), axis=2)
+            state = np.stack((temp_list[0],temp_list[1],temp_list[2],temp_list[3]), axis=2)
 
         # dimension adjust
         state = np.expand_dims(state, axis=0)
