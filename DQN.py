@@ -18,8 +18,8 @@ ATARI_SHAPE = (105, 80, 4)
 
 class DQN:
     def __init__(self,environment,experience_pool_size, update_frequency, gamma,epsilon_start,
-        epsilon_min, final_exploration,learning_rate, batch_size,target_network_update_frequency,
-        replay_start_size, do_nothing_actions,save_network_frequency):
+        epsilon_min, final_exploration, batch_size,target_network_update_frequency,
+        replay_start_size, do_nothing_actions,save_network_frequency,last_k_history,preprocess,prediction_model,target_model):
 
         self.experience_pool = deque(maxlen=experience_pool_size)
         self.update_frequency = update_frequency
@@ -27,41 +27,22 @@ class DQN:
         self.epsilon = epsilon_start
         self.epsilon_min = epsilon_min
         self.final_exploration = final_exploration
-        self.learning_rate = learning_rate
         self.do_nothing_actions = do_nothing_actions
         self.batch_size = batch_size
         self.target_network_update_frequency = target_network_update_frequency
         self.replay_start_size = replay_start_size
         self.save_network_frequence = save_network_frequency
-        self.last_k_history = deque(maxlen=4)
+        self.last_k_history = deque(maxlen=last_k_history)
+        self.preprocess = preprocess
 
         self.environment = environment
         self.state_size = environment.observation_space.shape[0]
         self.action_size = environment.action_space.n
-
         self.epsilon_decay = (self.epsilon - self.epsilon_min) / (self.final_exploration - self.replay_start_size)
-        self.prediction_model = self.build_model()
-        self.target_model = self.build_model()
+
+        self.prediction_model = prediction_model
+        self.target_model = target_model
         self.target_model.set_weights(self.prediction_model.get_weights())
-
-    def build_model(self):
-        model = Sequential()
-        model.add(Conv2D(32, (8, 8), padding='same', activation='relu', input_shape=ATARI_SHAPE, strides=(4, 4)))
-        model.add(Conv2D(64, (4, 4), padding='same', activation='relu', strides=(2, 2)))
-        model.add(Conv2D(64, (3, 3), padding='same', activation='relu', strides=(1, 1)))
-        model.add(Flatten()) # converts vectors to one dimension.
-        model.add(Dense(512, activation='relu'))
-        model.add(Dense(self.action_size, activation='linear'))
-
-        rmsprop = keras.optimizers.RMSprop(lr=self.learning_rate,rho=0.95, epsilon=0.01)
-        model.compile(loss=self.huber_loss, optimizer=rmsprop)
-
-        return model
-
-    def huber_loss(self, target, prediction):
-        # sqrt(1+error^2)-1
-        error = prediction - target
-        return K.mean(K.sqrt(1+K.square(error))-1, axis=-1)
 
     def load(self, name):
         self.prediction_model.load_weights(name)
@@ -78,40 +59,6 @@ class DQN:
         act_values = self.prediction_model.predict(state)
         # return index of best action
         return np.argmax(act_values[0])
-
-    def preprocess(self, state, reward):
-        # clip rewards -1 to 1
-        if reward < 0:
-            reward = -1
-        elif reward > 0:
-            reward = 1
-        else:
-            reward = 0
-
-        # to grayscale
-        state = np.mean(state, axis=2).astype(np.uint8)
-        # between [0 1]
-        state = np.divide(state, 255.0).astype(np.float16)
-        # down sample to 105x80
-        state = state[::2, ::2]
-
-        # concatenate with last 4 history
-        self.last_k_history.append(state)
-        temp_list = list(self.last_k_history)
-
-        if len(temp_list) == 1:
-            state = np.stack((temp_list[0],temp_list[0],temp_list[0],temp_list[0]), axis=2)
-        elif len(temp_list) == 2:
-            state = np.stack((temp_list[1],temp_list[0],temp_list[0],temp_list[0]), axis=2)
-        elif len(temp_list) == 3:
-            state = np.stack((temp_list[2],temp_list[1],temp_list[0],temp_list[0]), axis=2)
-        else:
-            state = np.stack((temp_list[3],temp_list[2],temp_list[1],temp_list[0]), axis=2)
-
-        # dimension adjust
-        state = np.expand_dims(state, axis=0)
-
-        return state,reward
 
     def replay(self, batch_size):
         # Sample minibatch from the experience pool
@@ -158,7 +105,7 @@ class DQN:
             # reset state in the beginning of each game
             state = self.environment.reset()
             self.last_k_history.clear()
-            state, reward = self.preprocess(state, 0)
+            state, reward = self.preprocess(state, 0,self.last_k_history)
             done = False
             totalreward = 0
             step_in_episode = 1
@@ -182,7 +129,7 @@ class DQN:
                 totalreward += reward
 
                 # Preprocess state and reward
-                next_state, reward = self.preprocess(next_state, reward)
+                next_state, reward = self.preprocess(next_state, reward,self.last_k_history)
 
                 # save to the experience pool the previous state, action, reward, and done
                 self.experience_pool.append((state, action, reward, next_state, done))
@@ -224,7 +171,7 @@ class DQN:
             # reset state in the beginning of each game
             state =  self.environment.reset()
             self.last_k_history.clear()
-            state, reward = self.preprocess(state, 0)
+            state, reward = self.preprocess(state, 0, self.last_k_history)
             done = False
             totalreward = 0
 
@@ -240,7 +187,10 @@ class DQN:
                 totalreward += reward
 
                 # Preprocess state and reward
-                next_state, reward = self.preprocess(next_state, reward)
+                next_state, reward = self.preprocess(next_state, reward, self.last_k_history)
+
+                # make next_state the new current state for the next frame.
+                state = next_state
 
                 # wait
                 time.sleep(wait)
