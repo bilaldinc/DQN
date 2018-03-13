@@ -149,7 +149,7 @@ class DQN:
 
                 # save model
                 if (total_steps % self.save_network_frequence) == 0:
-                    self.save("network_weights_" + str(total_steps))
+                    self.save(self.file_name + "_network_weights_" + str(total_steps))
                     print(self.file_name + "_network is saved to the file network_weights_" + str(total_steps))
 
                 # linear epsilon decay
@@ -163,7 +163,7 @@ class DQN:
             total_episode += 1
 
         # save model
-        self.save("network_weights_final" + str(total_steps))
+        self.save(self.file_name + "_network_weights_final" + str(total_steps))
 
     def play(self,max_episode,epsilon,wait):
         total_episode = 1
