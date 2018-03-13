@@ -20,7 +20,7 @@ batch_size = 32
 target_network_update_frequency = 10000
 replay_start_size = 50000
 do_nothing_actions = 30
-save_network_frequency = 200000 # 100,000 ~= 1 hour
+save_network_frequency = 10000 # 100,000 ~= 1 hour
 last_k_history = 4
 environment =  gym.make('BreakoutDeterministic-v4')
 state_size = environment.observation_space.shape[0]
@@ -76,6 +76,7 @@ agent = DQN(environment,experience_pool_size, update_frequency, gamma,epsilon_st
     epsilon_min, final_exploration, batch_size,target_network_update_frequency,
     replay_start_size, do_nothing_actions,save_network_frequency,last_k_history,atari_model.preprocess, atari_model.build_model(),atari_model.build_model(), file_name)
 
-agent.load("network_weights_4800000")
+# agent.load("network_weights_4800000")
+# agent.load_all("atari_cont_network_weights", "atari_contexp_pool.pkl")
 agent.learn(MAX_STEP)
 # agent.play(100,0.1,0.02)

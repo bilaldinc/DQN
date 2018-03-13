@@ -9,10 +9,9 @@ from keras.layers import Dense
 from keras.optimizers import Adam
 from keras import backend as K
 import keras
+import pickle
 from keras.models import Sequential
 from keras.layers import Dense, Conv2D, MaxPooling2D, Dropout, Flatten
-
-ATARI_SHAPE = (105, 80, 4)
 
 # TO do list
 
@@ -23,7 +22,8 @@ class DQN:
 
         self.experience_pool = deque(maxlen=experience_pool_size)
         self.update_frequency = update_frequency
-        self.gamma = gamma
+        self.gamma = gamma# after loading from pickle copy content to bigger array
+# add step to pickle
         self.epsilon = epsilon_start
         self.epsilon_min = epsilon_min
         self.final_exploration = final_exploration
@@ -45,9 +45,18 @@ class DQN:
         self.target_model = target_model
         self.target_model.set_weights(self.prediction_model.get_weights())
 
+        # counters
+        self.total_episode = 1
+        self.total_steps = 1
+
     def load(self, name):
         self.prediction_model.load_weights(name)
         self.target_model.load_weights(name)
+
+    def load_all(self, network_weights, exp_pool):
+        self.load(network_weights)
+        with open(exp_pool, 'rb') as f:
+            self.experience_pool, self.total_episode, self.total_steps = pickle.load(f)
 
     def save(self, name):
         self.prediction_model.save_weights(name)
@@ -99,10 +108,8 @@ class DQN:
         self.prediction_model.fit(minibatch_inputs[1:,...], prediction_model_state_predictions, epochs=1, verbose=0)
 
     def learn(self, max_step):
-        total_steps = 1
-        total_episode = 1
 
-        while total_steps < max_step:
+        while self.total_steps < max_step:
             # reset state in the beginning of each game
             state = self.environment.reset()
             self.last_k_history.clear()
@@ -120,7 +127,7 @@ class DQN:
                     # do not move first k move every episode
                     action = 0;
                 else:
-                    if total_steps < self.replay_start_size:
+                    if self.total_steps < self.replay_start_size:
                         action = random.randrange(self.action_size)
                     else:
                         action = self.act(state,self.epsilon)
@@ -138,29 +145,33 @@ class DQN:
                 # make next_state the new current state for the next frame.
                 state = next_state
 
-                if (total_steps >= self.replay_start_size) and (len(self.experience_pool) > self.batch_size) and (total_steps % self.update_frequency == 0):
+                if (self.total_steps >= self.replay_start_size) and (len(self.experience_pool) > self.batch_size) and (self.total_steps % self.update_frequency == 0):
                     # Perform SGD
                     self.replay(self.batch_size)
 
                 # Update target model
-                if (total_steps % self.target_network_update_frequency) == 0:
+                if (self.total_steps % self.target_network_update_frequency) == 0:
                     self.target_model.set_weights(self.prediction_model.get_weights())
                     print("target model is updated")
 
+
                 # save model
-                if (total_steps % self.save_network_frequence) == 0:
-                    self.save(self.file_name + "_network_weights_" + str(total_steps))
-                    print(self.file_name + "_network is saved to the file network_weights_" + str(total_steps))
+                if (self.total_steps % self.save_network_frequence) == 0:
+                    self.save(self.file_name + "_network_weights_" + str(self.total_steps))
+                    print(self.file_name + "_network is saved to the file network_weights_" + str(self.total_steps))
+                    with open(self.file_name + 'exp_pool.pkl', 'wb') as f:
+                        pickle.dump((self.experience_pool, self.total_episode, self.total_steps ), f)
+                    print("exp_pool is saved:")
 
                 # linear epsilon decay
-                if (total_steps >= self.replay_start_size) and (self.epsilon > self.epsilon_min):
+                if (self.total_steps >= self.replay_start_size) and (self.epsilon > self.epsilon_min):
                     self.epsilon -= self.epsilon_decay
 
                 step_in_episode += 1
-                total_steps += 1
+                self.total_steps += 1
 
-            print("episode: " + str(total_episode) + " reward:" + str(totalreward) + " step:" + str(step_in_episode) + " total_steps:" + str(total_steps) + " epsilon:" + str(self.epsilon))
-            total_episode += 1
+            print("episode: " + str(self.total_episode) + " reward:" + str(totalreward) + " step:" + str(step_in_episode) + " total_steps:" + str(self.total_steps) + " epsilon:" + str(self.epsilon))
+            self.total_episode += 1
 
         # save model
         self.save(self.file_name + "_network_weights_final" + str(total_steps))
