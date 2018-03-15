@@ -1,3 +1,9 @@
+"""
+Bilal DINC 150113008
+Selen PARLAR 150113049
+2018
+"""
+
 import random
 import gym
 import numpy as np
@@ -118,6 +124,7 @@ class DQN:
 
     def learn(self, max_step):
 
+        max_reward = 0
         while self.total_steps < max_step:
             # reset state in the beginning of each game
             self.last_k_history.clear()
@@ -159,7 +166,7 @@ class DQN:
                 # Update target model
                 if (self.total_steps % self.target_network_update_frequency) == 0:
                     self.target_model.set_weights(self.prediction_model.get_weights())
-                    print("target model is updated")
+                    print("Target model is updated")
 
 
                 # save model
@@ -177,7 +184,13 @@ class DQN:
                 step_in_episode += 1
                 self.total_steps += 1
 
-            print("episode: " + str(self.total_episode) + " reward:" + str(totalreward) + " step:" + str(step_in_episode) + " total_steps:" + str(self.total_steps) + " epsilon:" + str(self.epsilon))
+            print("Episode:" + str(self.total_episode) + " Reward:" + str(totalreward) + " Step:" + str(step_in_episode) + " Total steps:" + str(self.total_steps) + " Epsilon:" + str(self.epsilon))
+
+            if totalreward > max_reward:
+                max_reward=totalreward
+
+            if self.total_episode % 100 == 0:
+                print("Highest reward in " + str(self.total_episode) + " episodes:" + str(max_reward))
             self.total_episode += 1
 
         # save model
@@ -219,5 +232,5 @@ class DQN:
                 total_steps += 1
 
 
-            print("episode: " + str(total_episode) + " reward:" + str(totalreward) + " step:" + str(step_in_episode))
+            print("Episode:" + str(total_episode) + " Reward:" + str(totalreward) + " Step:" + str(step_in_episode))
             total_episode += 1

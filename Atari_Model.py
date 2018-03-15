@@ -1,3 +1,13 @@
+"""
+Bilal DINC 150113008
+Selen PARLAR 150113049
+2018
+
+Class for ANN model and preprocessing described in the  "Human-level control through deep reinforcement learning".
+"""
+
+
+
 import random
 import gym
 import numpy as np
@@ -12,9 +22,6 @@ import keras
 from keras.models import Sequential
 from keras.layers import Dense, Conv2D, Flatten, Lambda
 import scipy.misc
-
-
-# ANN model and preprocessing described in the  "Human-level control through deep reinforcement learning"
 
 class Atari_Model:
     def __init__(self, learning_rate, action_size):

@@ -1,3 +1,9 @@
+"""
+Bilal DINC 150113008
+Selen PARLAR 150113049
+2018
+"""
+
 import gym
 from DQN import DQN
 from Cart_Pole_Model import Cart_Pole_Model

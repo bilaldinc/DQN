@@ -1,3 +1,9 @@
+"""
+Bilal DINC 150113008
+Selen PARLAR 150113049
+2018
+"""
+
 import random
 import gym
 import numpy as np
