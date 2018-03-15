@@ -23,7 +23,7 @@ class DQN:
         self.experience_pool = deque(maxlen=experience_pool_size)
         self.update_frequency = update_frequency
         self.gamma = gamma# after loading from pickle copy content to bigger array
-# add step to pickle
+        # add step to pickle
         self.epsilon = epsilon_start
         self.epsilon_min = epsilon_min
         self.final_exploration = final_exploration
@@ -70,6 +70,15 @@ class DQN:
         # return index of best action
         return np.argmax(act_values[0])
 
+    def random_start(self):
+        self.environment.reset()
+        for i in range(random.randint(4, self.do_nothing_actions)):
+            next_state, reward, done, _ = self.environment.step(0)
+            self.environment.render()
+            state, reward = self.preprocess(next_state, reward, done, self.last_k_history)
+
+        return state, reward
+
     def replay(self, batch_size):
         # Sample minibatch from the experience pool
         minibatch = random.sample(self.experience_pool, batch_size)
@@ -111,26 +120,24 @@ class DQN:
 
         while self.total_steps < max_step:
             # reset state in the beginning of each game
-            state = self.environment.reset()
             self.last_k_history.clear()
+            # state = self.environment.reset()
+            state, reward = self.random_start()
             done = False
+            # state, reward = self.preprocess(state, 0, done, self.last_k_history)
             totalreward = 0
             step_in_episode = 1
-            state, reward = self.preprocess(state, 0, done, self.last_k_history)
 
             # every time step
             while not done:
                 self.environment.render()
 
                 # Decide action
-                if step_in_episode < self.do_nothing_actions:
-                    # do not move first k move every episode
-                    action = 0;
+                if self.total_steps < self.replay_start_size:
+                    action = random.randrange(self.action_size)
                 else:
-                    if self.total_steps < self.replay_start_size:
-                        action = random.randrange(self.action_size)
-                    else:
-                        action = self.act(state,self.epsilon)
+                    action = self.act(state,self.epsilon)
+
 
                 # Apply action
                 next_state, reward, done, _ =  self.environment.step(action)
