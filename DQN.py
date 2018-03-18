@@ -61,7 +61,7 @@ class DQN:
     def save(self, name):
         self.prediction_model.save_weights(name)
 
-    def act(self, state, epsilon):
+    def select_action(self, state, epsilon):
         if np.random.rand() <= epsilon:
              # act random
             return random.randrange(self.action_size)
@@ -69,6 +69,13 @@ class DQN:
         act_values = self.prediction_model.predict(state)
         # return index of best action
         return np.argmax(act_values[0])
+
+    # def act(action):
+    #     next_state, reward, done, _ = self.environment.step(action)
+    #     for i in range(self.action_repeat - 1):
+    #         next_state, reward, done, _ = self.environment.step(action)
+    #
+    #     return next_state, reward, done, _
 
     def random_start(self):
         self.environment.reset()
@@ -116,6 +123,10 @@ class DQN:
         # train minibatch
         self.prediction_model.fit(minibatch_inputs[1:,...], prediction_model_state_predictions, epochs=1, verbose=0)
 
+    def copy_model(self, model):
+        model.save('tmp_model')
+        return keras.models.load_model('tmp_model', custom_objects={'huber_loss' : self.huber_loss})
+
     def learn(self, max_step):
 
         while self.total_steps < max_step:
@@ -136,7 +147,7 @@ class DQN:
                 if self.total_steps < self.replay_start_size:
                     action = random.randrange(self.action_size)
                 else:
-                    action = self.act(state,self.epsilon)
+                    action = self.select_action(state,self.epsilon)
 
 
                 # Apply action
@@ -158,7 +169,8 @@ class DQN:
 
                 # Update target model
                 if (self.total_steps % self.target_network_update_frequency) == 0:
-                    self.target_model.set_weights(self.prediction_model.get_weights())
+                    # self.target_model.set_weights(self.prediction_model.get_weights())
+                    self.target_model = self.copy_model(self.prediction_model)
                     print("target model is updated")
 
 
@@ -189,10 +201,11 @@ class DQN:
 
         while total_episode < max_episode:
             # reset state in the beginning of each game
-            state =  self.environment.reset()
             self.last_k_history.clear()
+            # state = self.environment.reset()
+            state, reward = self.random_start()
             done = False
-            state, reward = self.preprocess(state, 0, done, self.last_k_history)
+            # state, reward = self.preprocess(state, 0, done, self.last_k_history)
             totalreward = 0
             step_in_episode = 1
 
@@ -201,7 +214,7 @@ class DQN:
                 self.environment.render()
 
                 # Decide action
-                action = self.act(state,epsilon)
+                action = self.select_action(state,epsilon)
 
                 # Apply action
                 next_state, reward, done, _ =  self.environment.step(action)
@@ -221,3 +234,11 @@ class DQN:
 
             print("episode: " + str(total_episode) + " reward:" + str(totalreward) + " step:" + str(step_in_episode))
             total_episode += 1
+
+    def huber_loss(self, prediction, target):
+        error = prediction - target
+        MSE = error * error / 2.0
+        MAE = abs(error) - 0.5
+        condition = (abs(error) > 1.0)
+        condition = K.cast(condition, 'float32')
+        return condition * MAE + (1-condition) * MSE
