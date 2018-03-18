@@ -89,7 +89,7 @@ class DQN:
 
         if self.consecutive_max and self.action_repeat > 1:
             state = np.maximum(state, previous_state)
-        return state, reward, done, _
+        return state, total_reward, done, _
 
     def random_start(self):
         self.environment.reset()
