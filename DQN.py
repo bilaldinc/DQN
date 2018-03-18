@@ -18,7 +18,7 @@ from keras.layers import Dense, Conv2D, MaxPooling2D, Dropout, Flatten
 class DQN:
     def __init__(self,environment,experience_pool_size, update_frequency, gamma,epsilon_start,
         epsilon_min, final_exploration, batch_size,target_network_update_frequency,
-        replay_start_size, do_nothing_actions,save_network_frequency,last_k_history,preprocess,prediction_model,target_model,file_name):
+        replay_start_size, do_nothing_actions,save_network_frequency,last_k_history,preprocess,prediction_model,target_model,file_name,action_repeat, consecutive_max):
 
         self.experience_pool = deque(maxlen=experience_pool_size)
         self.update_frequency = update_frequency
@@ -35,6 +35,9 @@ class DQN:
         self.last_k_history = deque(maxlen=last_k_history)
         self.preprocess = preprocess
         self.file_name = file_name
+
+        self.consecutive_max = consecutive_max
+        self.action_repeat = action_repeat
 
         self.environment = environment
         self.state_size = environment.observation_space.shape[0]
@@ -70,12 +73,23 @@ class DQN:
         # return index of best action
         return np.argmax(act_values[0])
 
-    # def act(action):
-    #     next_state, reward, done, _ = self.environment.step(action)
-    #     for i in range(self.action_repeat - 1):
-    #         next_state, reward, done, _ = self.environment.step(action)
-    #
-    #     return next_state, reward, done, _
+    def act(self, action):
+        state = None
+        reward = 0
+        done = False
+        total_reward = 0
+        for i in range(self.action_repeat):
+            previous_state = state
+            state, reward, done, _ = self.environment.step(action)
+            total_reward += reward
+            if done:
+                if i == 0 and previous_state is None:
+                    previous_state = state
+                break
+
+        if self.consecutive_max and self.action_repeat > 1:
+            state = np.maximum(state, previous_state)
+        return state, reward, done, _
 
     def random_start(self):
         self.environment.reset()
@@ -151,7 +165,8 @@ class DQN:
 
 
                 # Apply action
-                next_state, reward, done, _ =  self.environment.step(action)
+                # next_state, reward, done, _ =  self.environment.step(action)
+                next_state, reward, done, _ =  self.act(action)
                 totalreward += reward
 
                 # Preprocess state and reward
@@ -217,7 +232,8 @@ class DQN:
                 action = self.select_action(state,epsilon)
 
                 # Apply action
-                next_state, reward, done, _ =  self.environment.step(action)
+                # next_state, reward, done, _ =  self.environment.step(action)
+                next_state, reward, done, _ =  self.act(action)
                 totalreward += reward
 
                 # Preprocess state and reward
