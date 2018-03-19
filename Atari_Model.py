@@ -81,7 +81,10 @@ class Atari_Model:
         return state,reward
 
 
-    def huber_loss(self, target, prediction):
-        # sqrt(1+error^2)-1
+    def huber_loss(self, prediction, target):
         error = prediction - target
-        return K.mean(K.sqrt(1+K.square(error))-1, axis=-1)
+        MSE = error * error / 2.0
+        MAE = abs(error) - 0.5
+        condition = (abs(error) > 1.0)
+        condition = K.cast(condition, 'float32')
+        return condition * MAE + (1-condition) * MSE
