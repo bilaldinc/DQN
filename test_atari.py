@@ -29,7 +29,8 @@ replay_start_size = 50000
 do_nothing_actions = 30
 save_network_frequency = 300000 # 100,000 ~= 1 hour
 last_k_history = 4
-environment =  gym.make('BreakoutNoFrameskip-v4')
+# environment =  gym.make('BreakoutNoFrameskip-v4')
+environment =  gym.make('BreakoutDeterministic-v4')
 state_size = environment.observation_space.shape[0]
 action_size = environment.action_space.n
 file_name = "atari_cont"

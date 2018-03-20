@@ -20,8 +20,8 @@ from keras.models import Sequential
 from keras.layers import Dense, Conv2D, MaxPooling2D, Dropout, Flatten
 
 # TO do list
-# Epsilonu da pckle la
-# loaddan sonra step+1
+# control frameskip from bookmark in the home
+# log the experiment for plots
 
 class DQN:
     def __init__(self,environment,experience_pool_size, update_frequency, gamma,epsilon_start,
@@ -30,7 +30,7 @@ class DQN:
 
         self.experience_pool = deque(maxlen=experience_pool_size)
         self.update_frequency = update_frequency
-        self.gamma = gamma# after loading from pickle copy content to bigger array
+        self.gamma = gamma
         # add step to pickle
         self.epsilon = epsilon_start
         self.epsilon_min = epsilon_min
@@ -67,7 +67,7 @@ class DQN:
     def load_all(self, network_weights, exp_pool):
         self.load(network_weights)
         with open(exp_pool, 'rb') as f:
-            self.experience_pool, self.total_episode, self.total_steps = pickle.load(f)
+            self.experience_pool, self.total_episode, self.total_steps, self.epsilon = pickle.load(f)
 
     def save(self, name):
         self.prediction_model.save_weights(name)
@@ -174,8 +174,8 @@ class DQN:
 
 
                 # Apply action
-                # next_state, reward, done, _ =  self.environment.step(action)
-                next_state, reward, done, _ =  self.act(action)
+                next_state, reward, done, _ =  self.environment.step(action)
+                # next_state, reward, done, _ =  self.act(action)
                 totalreward += reward
 
                 # Preprocess state and reward
@@ -193,17 +193,9 @@ class DQN:
 
                 # Update target model
                 if (self.total_steps % self.target_network_update_frequency) == 0:
+                    # self.target_model = self.copy_model(self.prediction_model)
                     self.target_model.set_weights(self.prediction_model.get_weights())
                     print("Target model is updated")
-
-
-                # save model
-                if (self.total_steps % self.save_network_frequence) == 0:
-                    self.save(self.file_name + "_network_weights_" + str(self.total_steps))
-                    print(self.file_name + "_network is saved to the file network_weights_" + str(self.total_steps))
-                    with open(self.file_name + 'exp_pool.pkl', 'wb') as f:
-                        pickle.dump((self.experience_pool, self.total_episode, self.total_steps ), f)
-                    print("exp_pool is saved:")
 
                 # linear epsilon decay
                 if (self.total_steps >= self.replay_start_size) and (self.epsilon > self.epsilon_min):
@@ -211,6 +203,14 @@ class DQN:
 
                 step_in_episode += 1
                 self.total_steps += 1
+
+                # save model
+                if (self.total_steps % self.save_network_frequence) == 0:
+                    self.save(self.file_name + "_network_weights_" + str(self.total_steps))
+                    print(self.file_name + "_network is saved to the file network_weights_" + str(self.total_steps))
+                    with open(self.file_name + 'exp_pool.pkl', 'wb') as f:
+                        pickle.dump((self.experience_pool, self.total_episode, self.total_steps, self.epsilon), f)
+                    print("exp_pool is saved:")
 
             print("Episode:" + str(self.total_episode) + " Reward:" + str(totalreward) + " Step:" + str(step_in_episode) + " Total steps:" + str(self.total_steps) + " Epsilon:" + str(self.epsilon))
 
@@ -246,8 +246,8 @@ class DQN:
                 action = self.select_action(state,epsilon)
 
                 # Apply action
-                # next_state, reward, done, _ =  self.environment.step(action)
-                next_state, reward, done, _ =  self.act(action)
+                next_state, reward, done, _ =  self.environment.step(action)
+                # next_state, reward, done, _ =  self.act(action)
                 totalreward += reward
 
                 # Preprocess state and reward
