@@ -15,7 +15,7 @@ config = tf.ConfigProto()
 config.gpu_options.allow_growth = True
 session = tf.Session(config=config)
 
-MAX_STEP = 50000000
+MAX_STEP = 50000000 
 experience_pool_size = 1000000
 update_frequency = 4
 gamma = 0.99
@@ -48,4 +48,7 @@ agent = DQN(environment,experience_pool_size, update_frequency, gamma,epsilon_st
 # agent.load("atari_new_cont_network_weights_6000000")
 # agent.load_all("atari_cont_network_weights", "atari_contexp_pool.pkl")
 agent.learn(MAX_STEP)
-# agent.play(100,0,0.02)
+#agent.play(100,0,0.02)
+agent.save("atari_new_cont_network_weights_6000000",agent.prediction_model)
+
+#agent.load("atari_new_cont_network_weights_6000000.json", "atari_new_cont_network_weights_6000000.h5")

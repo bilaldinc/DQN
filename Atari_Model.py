@@ -5,6 +5,8 @@ Selen PARLAR 150113049
 
 Class for ANN model and preprocessing described in the  "Human-level control through deep reinforcement learning".
 """
+
+
 import numpy as np
 from keras.models import Sequential
 from keras.layers import Dense
@@ -17,7 +19,7 @@ class Atari_Model:
     def __init__(self, learning_rate, action_size):
         self.action_size = action_size
         self.learning_rate = learning_rate
-
+#%%
     def build_model(self):
         model = Sequential()
         model.add(Lambda(lambda x: x / 255.0, input_shape=(84, 84, 4)))
@@ -34,7 +36,7 @@ class Atari_Model:
         model.summary()
         return model
 
-
+#%%
     def preprocess(self, state, reward, done, last_k_history):
         # clip rewards -1 to 1
         if reward < 0:
@@ -69,7 +71,7 @@ class Atari_Model:
         state = np.expand_dims(state, axis=0)
 
         return state,reward
-
+#%%
 
     def huber_loss(self, prediction, target):
         error = prediction - target

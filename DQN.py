@@ -11,6 +11,7 @@ from collections import deque
 from keras import backend as K
 import keras
 import pickle
+from keras.models import model_from_json
 
 # TO do list
 # control frameskip from bookmark in the home
@@ -53,18 +54,49 @@ class DQN:
         self.total_episode = 1
         self.total_steps = 1
 
-    def load(self, name):
+#%%
+    def load1(self, name):
         self.prediction_model.load_weights(name)
         self.target_model.load_weights(name)
+#%%
+    def load_all1(self, network_weights, exp_pool):
+        self.load(network_weights)
+        with open(exp_pool, 'rb') as f:
+            self.experience_pool, self.total_episode, self.total_steps, self.epsilon = pickle.load(f)
+#%%
+    def save1(self, name):
+        self.prediction_model.save_weights(name)
 
+#%% 
+    def load(self, namej, nameh):
+        # load json and create model
+        json_file = open(namej, 'r')
+        loaded_model_json = json_file.read()
+        json_file.close()
+        self.prediction_model = model_from_json(loaded_model_json)
+        self.target_model = model_from_json(loaded_model_json)
+        # load weights into new model
+        self.prediction_model.load_weights(nameh)       
+        self.target_model.load_weights(nameh)
+        rmsprop = keras.optimizers.RMSprop(lr=0.00025,rho=0.95, epsilon=0.01)
+        self.prediction_model.compile(loss=self.huber_loss, optimizer=rmsprop)
+        self.target_model.compile(loss=self.huber_loss, optimizer=rmsprop)
+
+
+#%%
     def load_all(self, network_weights, exp_pool):
         self.load(network_weights)
         with open(exp_pool, 'rb') as f:
             self.experience_pool, self.total_episode, self.total_steps, self.epsilon = pickle.load(f)
-
-    def save(self, name):
-        self.prediction_model.save_weights(name)
-
+#%%
+    def save(self, name, model):
+        # serialize model to JSON
+        model_json = model.to_json()
+        with open(name+ ".json", "w") as json_file:
+            json_file.write(model_json)
+        # serialize weights to HDF5
+        model.save_weights(name+"w.h5")
+#%%
     def select_action(self, state, epsilon):
         if np.random.rand() <= epsilon:
              # act random
@@ -73,7 +105,7 @@ class DQN:
         act_values = self.prediction_model.predict(state)
         # return index of best action
         return np.argmax(act_values[0])
-
+#%%
     def act(self, action):
         state = None
         reward = 0
@@ -91,7 +123,7 @@ class DQN:
         if self.consecutive_max and self.action_repeat > 1:
             state = np.maximum(state, previous_state)
         return state, total_reward, done, _
-
+#%%
     def random_start(self):
         self.environment.reset()
         for i in range(random.randint(4, self.do_nothing_actions)):
@@ -100,7 +132,7 @@ class DQN:
             state, reward = self.preprocess(next_state, reward, done, self.last_k_history)
 
         return state, reward
-
+#%%
     def replay(self, batch_size):
         # Sample minibatch from the experience pool
         minibatch = random.sample(self.experience_pool, batch_size)
@@ -137,11 +169,7 @@ class DQN:
 
         # train minibatch
         self.prediction_model.fit(minibatch_inputs[1:,...], prediction_model_state_predictions, epochs=1, verbose=0)
-
-    def copy_model(self, model):
-        model.save('tmp_model')
-        return keras.models.load_model('tmp_model', custom_objects={'huber_loss' : self.huber_loss})
-
+#%%
     def learn(self, max_step):
 
         max_reward = 0
@@ -199,7 +227,7 @@ class DQN:
 
                 # save model
                 if (self.total_steps % self.save_network_frequence) == 0:
-                    self.save(self.file_name + "_network_weights_" + str(self.total_steps))
+                    self.save(self.file_name + "_network_weights_" + str(self.total_steps),self.prediction_model)
                     print(self.file_name + "_network is saved to the file network_weights_" + str(self.total_steps))
                     with open(self.file_name + 'exp_pool.pkl', 'wb') as f:
                         pickle.dump((self.experience_pool, self.total_episode, self.total_steps, self.epsilon), f)
@@ -215,8 +243,8 @@ class DQN:
             self.total_episode += 1
 
         # save model
-        self.save(self.file_name + "_network_weights_final" + str(self.total_steps))
-
+        self.save(self.file_name + "_network_weights_final" + str(self.total_steps), self.prediction_model)
+#%%
     def play(self,max_episode,epsilon,wait):
         total_episode = 1
         total_steps = 1
@@ -257,7 +285,7 @@ class DQN:
 
             print("Episode:" + str(total_episode) + " Reward:" + str(totalreward) + " Step:" + str(step_in_episode))
             total_episode += 1
-
+#%%
     def huber_loss(self, prediction, target):
         error = prediction - target
         MSE = error * error / 2.0
