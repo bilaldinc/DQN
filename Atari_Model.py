@@ -5,22 +5,12 @@ Selen PARLAR 150113049
 
 Class for ANN model and preprocessing described in the  "Human-level control through deep reinforcement learning".
 """
-
-
-
-import random
-import gym
 import numpy as np
-import sys
-import time
-from collections import deque
 from keras.models import Sequential
 from keras.layers import Dense
-from keras.optimizers import Adam
 from keras import backend as K
 import keras
-from keras.models import Sequential
-from keras.layers import Dense, Conv2D, Flatten, Lambda
+from keras.layers import Conv2D, Flatten, Lambda
 import scipy.misc
 
 class Atari_Model:

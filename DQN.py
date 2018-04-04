@@ -5,19 +5,12 @@ Selen PARLAR 150113049
 """
 
 import random
-import gym
 import numpy as np
-import sys
 import time
 from collections import deque
-from keras.models import Sequential
-from keras.layers import Dense
-from keras.optimizers import Adam
 from keras import backend as K
 import keras
 import pickle
-from keras.models import Sequential
-from keras.layers import Dense, Conv2D, MaxPooling2D, Dropout, Flatten
 
 # TO do list
 # control frameskip from bookmark in the home
@@ -222,7 +215,7 @@ class DQN:
             self.total_episode += 1
 
         # save model
-        self.save(self.file_name + "_network_weights_final" + str(total_steps))
+        self.save(self.file_name + "_network_weights_final" + str(self.total_steps))
 
     def play(self,max_episode,epsilon,wait):
         total_episode = 1
