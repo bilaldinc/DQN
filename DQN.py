@@ -12,6 +12,7 @@ from keras import backend as K
 import keras
 import pickle
 from keras.models import model_from_json
+from math import ceil
 
 # TO do list
 # control frameskip from bookmark in the home
@@ -244,6 +245,7 @@ class DQN:
 
         # save model
         self.save(self.file_name + "_network_weights_final" + str(self.total_steps), self.prediction_model)
+        
 #%%
     def play(self,max_episode,epsilon,wait):
         total_episode = 1
@@ -293,3 +295,98 @@ class DQN:
         condition = (abs(error) > 1.0)
         condition = K.cast(condition, 'float32')
         return condition * MAE + (1-condition) * MSE
+    
+    def leaky_ReLU(self,x):
+        if(x <= 0):
+            return 0.01 * x
+        else:
+            return x
+    
+    def ReLU(self,x):
+        if(x <= 0):
+            return 0
+        else:
+            return x
+            
+    def linear(self,x):
+        return x     
+        
+    def forward_pass(self,input_,weights):
+        ####---------------------------------------------------------------
+        conv_layer_kernels = [weights[0], weights[2], weights[4]]
+        conv_layer_biases = [weights[1], weights[3], weights[5]]
+        conv_layer_strides = [(4,4), (2,2), (1,1)]
+        conv_layer_activations = [self.ReLU,self.ReLU,self.ReLU]
+        conv_layers = list(zip(conv_layer_kernels,conv_layer_biases,conv_layer_strides,conv_layer_activations))
+        ####---------------------------------------------------------------
+        
+        ####---------------------------------------------------------------
+        dense_layer_neurons = [weights[6],weights[8]]
+        dense_layer_biases = [weights[7],weights[9]]
+        dense_layer_activations = [self.ReLU,self.linear]
+        dense_layers = list(zip(dense_layer_neurons,dense_layer_biases,dense_layer_activations))
+        ####---------------------------------------------------------------
+        
+    
+        
+        output_layer = np.zeros((input_.shape[0], len(weights[9])))
+        for p in range(input_.shape[0]):
+            input_layer = input_[p]
+            # lambda layer
+            input_layer = input_layer / 255.0
+            output = None
+            for kernel,bias,stride,activation in conv_layers:
+                
+                # prepare output size of the layer
+                output = np.zeros((int(ceil(input_layer.shape[0]/stride[0])),int(ceil(input_layer.shape[1]/stride[1])), kernel.shape[3]))
+                
+                # calculate padding size
+                pad_i = int(ceil((stride[0] * (output.shape[0] - 1) - input_layer.shape[0] + kernel.shape[0]) / 2.0))
+                pad_j = int(ceil((stride[1] * (output.shape[1] - 1) - input_layer.shape[1] + kernel.shape[1]) / 2.0))
+                
+                # zero padding
+                # ((top, bottom), (left, right))
+                # find better a way to do it 
+                input_padded = np.zeros((input_layer.shape[0] + pad_i*2, input_layer.shape[1] + pad_j*2,input_layer.shape[2]))
+                for i in range(input_layer.shape[2]):
+                    pad = np.pad(input_layer[...,i], ((pad_j,pad_j),(pad_i,pad_i)), 'constant')
+                    #pad = np.expand_dims(pad, axis=2)
+                    input_padded[:,:,i] = pad
+            
+                
+                # for all kernels                  
+                for k in range(output.shape[2]):
+                    # stride and multiply input with kernel
+                    for i in range(output.shape[0]):
+                        for j in range(output.shape[1]):
+                            sliced = input_padded[i*stride[0]:kernel.shape[0]+i*stride[0],j*stride[1]:kernel.shape[1]+j*stride[1],...]
+                            multiplied = np.multiply(kernel[...,k],sliced)
+                            output[i][j][k] = activation(np.sum(multiplied) + bias[k] )
+                          
+                               
+                input_layer = output
+            
+            ####---------------------------------------------------------------
+            
+            input_layer = input_layer.flatten()
+            
+            ####---------------------------------------------------------------
+            
+            output = None
+    
+            for neuron,bias,activation in dense_layers:
+                output = np.zeros((neuron.shape[1]))
+                for i in range(neuron.shape[1]):
+                    acc = 0
+                    for j in range(neuron.shape[0]):
+                        acc += np.multiply(input_layer[j] , neuron[j][i])
+                    output[i] = activation(acc + bias[i] )
+            
+            
+                input_layer = output
+            
+            ####---------------------------------------------------------------
+        
+            output_layer[p] = output
+        
+        return output_layer
