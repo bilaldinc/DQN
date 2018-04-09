@@ -17,11 +17,12 @@ from math import ceil
 # TO do list
 # control frameskip from bookmark in the home
 # log the experiment for plots
+# test with leaky relu
 
 class DQN:
     def __init__(self,environment,experience_pool_size, update_frequency, gamma,epsilon_start,
         epsilon_min, final_exploration, batch_size,target_network_update_frequency,
-        replay_start_size, do_nothing_actions,save_network_frequency,last_k_history,preprocess,prediction_model,target_model,file_name,action_repeat, consecutive_max):
+        replay_start_size, do_nothing_actions,save_network_frequency,last_k_history,preprocess,prediction_model,target_model,file_name,action_repeat, consecutive_max,eval_freq):
 
         self.experience_pool = deque(maxlen=experience_pool_size)
         self.update_frequency = update_frequency
@@ -54,6 +55,9 @@ class DQN:
         # counters
         self.total_episode = 1
         self.total_steps = 1
+        self.eval_freq = eval_freq
+        f = open(self.file_name + 'AvarageQ_','w')
+        f.close()
 
 #%%
     def load1(self, name):
@@ -233,6 +237,10 @@ class DQN:
                     with open(self.file_name + 'exp_pool.pkl', 'wb') as f:
                         pickle.dump((self.experience_pool, self.total_episode, self.total_steps, self.epsilon), f)
                     print("exp_pool is saved:")
+                    
+                # average q    
+                if (self.total_steps % self.eval_freq) == 0 and (self.total_steps >= self.replay_start_size):
+                    self.evaluate_q(self.total_steps)
 
             print("Episode:" + str(self.total_episode) + " Reward:" + str(totalreward) + " Step:" + str(step_in_episode) + " Total steps:" + str(self.total_steps) + " Epsilon:" + str(self.epsilon))
 
@@ -309,7 +317,24 @@ class DQN:
             return x
             
     def linear(self,x):
-        return x     
+        return x
+        
+    def evaluate_q(self,step):
+        minibatch = random.sample(self.experience_pool, 16)
+        state_batch = np.zeros(minibatch[0][0].shape)
+        for state, action, reward, next_state, done in minibatch:
+            state_batch = np.append(state_batch, state,axis=0)
+    
+        predictions = self.prediction_model.predict(state_batch[1:, ...])
+        maxqs = np.max(predictions,axis=1)
+        meanq = np.mean(maxqs)
+        print("AvarageQ: " + str(meanq))
+        
+        f = open(self.file_name + 'AvarageQ_','a')
+        f.write(str(step) + ' ' + str(meanq) + '\n')
+        f.close()
+
+        
         
     def forward_pass(self,input_,weights):
         ####---------------------------------------------------------------
