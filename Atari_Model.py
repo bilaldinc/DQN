@@ -14,6 +14,9 @@ from keras import backend as K
 import keras
 from keras.layers import Conv2D, Flatten, Lambda
 import scipy.misc
+import tensorflow as tf
+
+HUBER_LOSS_DELTA = 1.0
 
 class Atari_Model:
     def __init__(self, learning_rate, action_size):
@@ -68,15 +71,19 @@ class Atari_Model:
             state = np.stack((temp_list[0],temp_list[1],temp_list[2],temp_list[3]), axis=2)
 
         # dimension adjust
-        state = np.expand_dims(state, axis=0)
+        # state = np.expand_dims(state, axis=0)
 
         return state,reward
 #%%
 
-    def huber_loss(self, prediction, target):
-        error = prediction - target
-        MSE = error * error / 2.0
-        MAE = abs(error) - 0.5
-        condition = (abs(error) > 1.0)
-        condition = K.cast(condition, 'float32')
-        return condition * MAE + (1-condition) * MSE
+    def huber_loss(self, y_true, y_pred):
+        err = y_true - y_pred
+    
+        cond = K.abs(err) < HUBER_LOSS_DELTA
+        L2 = 0.5 * K.square(err)
+        L1 = HUBER_LOSS_DELTA * (K.abs(err) - 0.5 * HUBER_LOSS_DELTA)
+    
+        loss = tf.where(cond, L2, L1)
+    
+        return K.mean(loss)
+

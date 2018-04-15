@@ -72,7 +72,7 @@ class DQN:
     def save1(self, name):
         self.prediction_model.save_weights(name)
 
-#%% 
+#%%
     def load(self, namej, nameh):
         # load json and create model
         json_file = open(namej, 'r')
@@ -81,7 +81,7 @@ class DQN:
         self.prediction_model = model_from_json(loaded_model_json)
         self.target_model = model_from_json(loaded_model_json)
         # load weights into new model
-        self.prediction_model.load_weights(nameh)       
+        self.prediction_model.load_weights(nameh)
         self.target_model.load_weights(nameh)
         rmsprop = keras.optimizers.RMSprop(lr=0.00025,rho=0.95, epsilon=0.01)
         self.prediction_model.compile(loss=self.huber_loss, optimizer=rmsprop)
@@ -107,6 +107,7 @@ class DQN:
              # act random
             return random.randrange(self.action_size)
         # Predict the best action values
+        state = np.expand_dims(state, axis=0)
         act_values = self.prediction_model.predict(state)
         # return index of best action
         return np.argmax(act_values[0])
@@ -139,41 +140,36 @@ class DQN:
         return state, reward
 #%%
     def replay(self, batch_size):
-        # Sample minibatch from the experience pool
         minibatch = random.sample(self.experience_pool, batch_size)
 
-        #---------------------------------------------------------
-        # prepare inputs for prediction
-        state_batch = np.zeros(minibatch[0][0].shape)
-        next_state_batch = np.zeros(minibatch[0][0].shape)
-        for state, action, reward, next_state, done in minibatch:
-            state_batch = np.append(state_batch, state,axis=0)
-            next_state_batch = np.append(next_state_batch, state, axis=0)
+        state_batch = np.array([ i[0] for i in minibatch])
+        next_state_batch = np.array([ i[3] for i in minibatch])
 
         # predict necessary informations to produce targets
-        prediction_model_state_predictions = self.prediction_model.predict(state_batch[1:, ...])
-        target_model_next_state_predictions = self.target_model.predict(next_state_batch[1:, ...])
+        prediction_model_state_predictions = self.prediction_model.predict(state_batch)
+        target_model_next_state_predictions = self.target_model.predict(next_state_batch)
 
-        #---------------------------------------------------------
-        # prepare targets and inputs for trainning
-        minibatch_inputs = np.zeros(minibatch[0][0].shape)
-        for index, sample in zip(range(batch_size),minibatch):
-            state, action, reward, next_state, done = sample
+        # initiate
+        shape = list(minibatch[0][0].shape)
+        shape.insert(0, batch_size)
+        shape = tuple(shape)
+        x = np.zeros(shape)
+        y = np.zeros((batch_size, self.action_size))
 
-            # append input state
-            minibatch_inputs = np.append(minibatch_inputs,state,axis=0)
 
-            # calculate target
-            target = reward
+        for i in range(batch_size):
+            state, action, reward, next_state, done = minibatch[i]
+
+            target = prediction_model_state_predictions[i]
             if not done:
-                # target should produced from target model
-                target = (reward + self.gamma * np.amax(target_model_next_state_predictions[index]))
+                 target[action] = reward + self.gamma * np.amax(target_model_next_state_predictions[i])
+            else:
+                 target[action] = reward
 
-            # replace desired action with target action
-            prediction_model_state_predictions[index][action] = target
+            x[i] = state
+            y[i] = target
 
-        # train minibatch
-        self.prediction_model.fit(minibatch_inputs[1:,...], prediction_model_state_predictions, epochs=1, verbose=0)
+        self.prediction_model.fit(x, y, epochs=1, verbose=0)
 #%%
     def learn(self, max_step):
 
@@ -205,7 +201,7 @@ class DQN:
                 totalreward += reward
 
                 # Preprocess state and reward
-                next_state, reward = self.preprocess(next_state, done, reward,self.last_k_history)
+                next_state, reward = self.preprocess(next_state,reward, done ,self.last_k_history)
 
                 # save to the experience pool the previous state, action, reward, and done
                 self.experience_pool.append((state, action, reward, next_state, done))
@@ -237,8 +233,8 @@ class DQN:
                     with open(self.file_name + 'exp_pool.pkl', 'wb') as f:
                         pickle.dump((self.experience_pool, self.total_episode, self.total_steps, self.epsilon), f)
                     print("exp_pool is saved:")
-                    
-                # average q    
+
+                # average q
                 if (self.total_steps % self.eval_freq) == 0 and (self.total_steps >= self.replay_start_size):
                     self.evaluate_q(self.total_steps)
 
@@ -253,7 +249,7 @@ class DQN:
 
         # save model
         self.save(self.file_name + "_network_weights_final" + str(self.total_steps), self.prediction_model)
-        
+
 #%%
     def play(self,max_episode,epsilon,wait):
         total_episode = 1
@@ -303,39 +299,37 @@ class DQN:
         condition = (abs(error) > 1.0)
         condition = K.cast(condition, 'float32')
         return condition * MAE + (1-condition) * MSE
-    
+
     def leaky_ReLU(self,x):
         if(x <= 0):
             return 0.01 * x
         else:
             return x
-    
+
     def ReLU(self,x):
         if(x <= 0):
             return 0
         else:
             return x
-            
+
     def linear(self,x):
         return x
-        
+
     def evaluate_q(self,step):
-        minibatch = random.sample(self.experience_pool, 16)
-        state_batch = np.zeros(minibatch[0][0].shape)
-        for state, action, reward, next_state, done in minibatch:
-            state_batch = np.append(state_batch, state,axis=0)
-    
-        predictions = self.prediction_model.predict(state_batch[1:, ...])
+        minibatch = random.sample(self.experience_pool, 256)
+        state_batch = np.array([ i[0] for i in minibatch])
+
+        predictions = self.prediction_model.predict(state_batch)
         maxqs = np.max(predictions,axis=1)
         meanq = np.mean(maxqs)
         print("AvarageQ: " + str(meanq))
-        
+
         f = open(self.file_name + 'AvarageQ_','a')
         f.write(str(step) + ' ' + str(meanq) + '\n')
         f.close()
 
-        
-        
+
+
     def forward_pass(self,input_,weights):
         ####---------------------------------------------------------------
         conv_layer_kernels = [weights[0], weights[2], weights[4]]
@@ -344,16 +338,16 @@ class DQN:
         conv_layer_activations = [self.ReLU,self.ReLU,self.ReLU]
         conv_layers = list(zip(conv_layer_kernels,conv_layer_biases,conv_layer_strides,conv_layer_activations))
         ####---------------------------------------------------------------
-        
+
         ####---------------------------------------------------------------
         dense_layer_neurons = [weights[6],weights[8]]
         dense_layer_biases = [weights[7],weights[9]]
         dense_layer_activations = [self.ReLU,self.linear]
         dense_layers = list(zip(dense_layer_neurons,dense_layer_biases,dense_layer_activations))
         ####---------------------------------------------------------------
-        
-    
-        
+
+
+
         output_layer = np.zeros((input_.shape[0], len(weights[9])))
         for p in range(input_.shape[0]):
             input_layer = input_[p]
@@ -361,25 +355,25 @@ class DQN:
             input_layer = input_layer / 255.0
             output = None
             for kernel,bias,stride,activation in conv_layers:
-                
+
                 # prepare output size of the layer
                 output = np.zeros((int(ceil(input_layer.shape[0]/stride[0])),int(ceil(input_layer.shape[1]/stride[1])), kernel.shape[3]))
-                
+
                 # calculate padding size
                 pad_i = int(ceil((stride[0] * (output.shape[0] - 1) - input_layer.shape[0] + kernel.shape[0]) / 2.0))
                 pad_j = int(ceil((stride[1] * (output.shape[1] - 1) - input_layer.shape[1] + kernel.shape[1]) / 2.0))
-                
+
                 # zero padding
                 # ((top, bottom), (left, right))
-                # find better a way to do it 
+                # find better a way to do it
                 input_padded = np.zeros((input_layer.shape[0] + pad_i*2, input_layer.shape[1] + pad_j*2,input_layer.shape[2]))
                 for i in range(input_layer.shape[2]):
                     pad = np.pad(input_layer[...,i], ((pad_j,pad_j),(pad_i,pad_i)), 'constant')
                     #pad = np.expand_dims(pad, axis=2)
                     input_padded[:,:,i] = pad
-            
-                
-                # for all kernels                  
+
+
+                # for all kernels
                 for k in range(output.shape[2]):
                     # stride and multiply input with kernel
                     for i in range(output.shape[0]):
@@ -387,18 +381,18 @@ class DQN:
                             sliced = input_padded[i*stride[0]:kernel.shape[0]+i*stride[0],j*stride[1]:kernel.shape[1]+j*stride[1],...]
                             multiplied = np.multiply(kernel[...,k],sliced)
                             output[i][j][k] = activation(np.sum(multiplied) + bias[k] )
-                          
-                               
+
+
                 input_layer = output
-            
+
             ####---------------------------------------------------------------
-            
+
             input_layer = input_layer.flatten()
-            
+
             ####---------------------------------------------------------------
-            
+
             output = None
-    
+
             for neuron,bias,activation in dense_layers:
                 output = np.zeros((neuron.shape[1]))
                 for i in range(neuron.shape[1]):
@@ -406,12 +400,12 @@ class DQN:
                     for j in range(neuron.shape[0]):
                         acc += np.multiply(input_layer[j] , neuron[j][i])
                     output[i] = activation(acc + bias[i] )
-            
-            
+
+
                 input_layer = output
-            
+
             ####---------------------------------------------------------------
-        
+
             output_layer[p] = output
-        
+
         return output_layer
